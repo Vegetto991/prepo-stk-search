@@ -5,7 +5,7 @@ st.title("Master Serial Filter App")
 
 st.write("""
 Upload your **WORKING COPY.xlsx** once.  
-Then upload **one or more Excel files** containing serial numbers.  
+Then upload **one or more Excel files** containing Serial Number, Position, and Row.  
 The app will merge all serial lists, filter the master file, and generate a clean output.
 """)
 
@@ -24,31 +24,57 @@ if master_file and serial_files:
         # Load master dataset
         df_master = pd.read_excel(master_file)
 
-        # Combine all serial numbers from all uploaded files
-        combined_serials = []
+        # Combined list of serials with Position + Row
+        combined_entries = []
 
         for f in serial_files:
             df = pd.read_excel(f)
-            if "Serial Number" in df.columns:
-                serials = df["Serial Number"].dropna().astype(str).tolist()
-                combined_serials.extend(serials)
+
+            # Ensure required columns exist
+            if not all(col in df.columns for col in ["Serial Number", "Position", "Row"]):
+                st.error(f"File {f.name} is missing required columns.")
+                st.stop()
+
+            # Append rows as dictionaries to preserve order
+            for _, row in df.iterrows():
+                combined_entries.append({
+                    "Serial Number": str(row["Serial Number"]),
+                    "Position": row["Position"],
+                    "Row": row["Row"]
+                })
 
         # Prepare output rows
         output_rows = []
 
-        for sn in combined_serials:
+        for entry in combined_entries:
+            sn = entry["Serial Number"]
+            pos = entry["Position"]
+            row_val = entry["Row"]
+
             matches = df_master[df_master["Serial Number"].astype(str) == sn]
 
             if len(matches) > 0:
-                # Add the first match
-                output_rows.append(matches.iloc[0])
+                # Add first match + Position + Row
+                first = matches.iloc[0].copy()
+                first["Position"] = pos
+                first["Row"] = row_val
+                output_rows.append(first)
 
                 # Add blank rows for duplicates
                 for _ in range(len(matches) - 1):
                     output_rows.append(pd.Series())
             else:
-                # Serial not found → blank row
-                output_rows.append(pd.Series())
+                # Serial not found → blank row but keep Position + Row
+                blank = pd.Series({
+                    "Main work center": None,
+                    "Model number": None,
+                    "Material Description": None,
+                    "Material": None,
+                    "Serial Number": sn,
+                    "Position": pos,
+                    "Row": row_val
+                })
+                output_rows.append(blank)
 
         # Build final DataFrame
         output_df = pd.DataFrame(output_rows)[[
@@ -56,7 +82,9 @@ if master_file and serial_files:
             "Model number",
             "Material Description",
             "Material",
-            "Serial Number"
+            "Serial Number",
+            "Position",
+            "Row"
         ]]
 
         # Format Material column as 9-digit text
