@@ -83,7 +83,7 @@ if master_file and serial_files:
                 first = matches.iloc[0].copy()
                 first["Room"] = room
                 first["Lot"] = lot
-                output_rows.append(first)
+                output_rows.append(first.to_dict())
 
                 # Add blank rows for duplicates
                 for _ in range(len(matches) - 1):
