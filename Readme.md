@@ -4,8 +4,8 @@ This Streamlit app filters a master WORKING COPY.xlsx file using one or more upl
 serial list files that contain:
 
 - Serial Number  
-- Position  
-- Row  
+- Room  
+- Lot  
 
 The app:
 
